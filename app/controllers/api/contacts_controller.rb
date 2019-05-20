@@ -1,6 +1,19 @@
 class Api::ContactsController < ApplicationController
+  before_action :authenticate_user
+
+
   def index
-    @contacts = Contact.all
+    @contacts = current_user.contacts
+
+  if params[:first_name] #make sure in url to write ?search=tiemae
+    @contacts = @contacts.where("first_name iLIKE ?", "%#{params[:first_name]}%")
+  end
+
+  if params[:search]
+    @contacts = @contacts.where("middle_name iLIKE ? OR last_name iLIKE ? OR email iLIKE ? OR phone_number iLIKE ? OR bio iLIKE ?", "#{params[:search]}", "#{params[:search]}", "#{params[:search]}", "#{params[:search]}", "#{params[:search]}") #"%#{params[:search]}%" --> this will be more forgiving because it's not as strict wit the search 
+  end
+
+
     render 'contact.json.jbuilder'
   end
 
@@ -16,9 +29,13 @@ class Api::ContactsController < ApplicationController
       last_name: params[:last_name], 
       email: params[:email], 
       phone_number: params[:phone_number],
-      bio: params[:bio])
-    @contact.save
-    render 'show.json.jbuilder'
+      bio: params[:bio],
+      user_id: current_user.id )
+    if @contact.save
+      render 'show.json.jbuilder'
+    else
+      render json: {errors: @contact.errors.full_messages}, status: :unprocessable_entity
+    end
   end
 
   def update
@@ -31,8 +48,11 @@ class Api::ContactsController < ApplicationController
     @contact.phone_number = params[:phone_number] || @contact.phone_number
     @contact.bio = params[:bio] || @contact.bio
   
-  @contact.save
-  render 'show.json.jbuilder' 
+    if @contact.save
+      render 'show.json.jbuilder'
+    else
+      render json: {errors: @contact.errors.full_messages}, status: :unprocessable_entity
+    end 
   end
 
   def destroy
@@ -41,5 +61,4 @@ class Api::ContactsController < ApplicationController
     render json: {message: "Contact successfully destroyed!"}
   end
 
-
-end
+end 
